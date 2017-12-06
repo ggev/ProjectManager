@@ -1,0 +1,104 @@
+﻿@using Microsoft.AspNetCore.Http;
+
+@model ProjectManager.Models.Employees
+@{
+    ViewData["Title"] = "Details";
+
+    if (Context.Session.GetString("UserId") == null)
+    {
+        Context.Response.Redirect("/Login/SignIn");
+    }
+
+    string experiance = ViewBag.Experiance;
+    var imgSrc = ViewBag.ImgSrc;
+}
+<h2>Details</h2>
+<div>
+    <hr />
+    @if (imgSrc != null)
+    {
+        <div class="col-lg-4 left"><img src="@imgSrc" class="img-rounded" alt="Cinque Terre" width="200" height="150"></div>
+    }
+    else
+    {
+        <div class="col-lg-4 left"><img src="~/images/no-image.png" class="img-rounded" alt="Cinque Terre" width="200" height="150"></div>
+    }
+    <div class="bottom">
+        <div class="col-lg-8">
+            <dl class="dl-horizontal">
+                <dt>
+                    @Html.DisplayNameFor(model => model.FirstName)
+                </dt>
+                <dd>
+                    @Html.DisplayFor(model => model.FirstName)
+                </dd>
+                <dt>
+                    @Html.DisplayNameFor(model => model.LastName)
+                </dt>
+                <dd>
+                    @Html.DisplayFor(model => model.LastName)
+                </dd>
+                <dt>
+                    @Html.DisplayNameFor(model => model.Birthday)
+                </dt>
+                <dd>
+                    @Html.DisplayFor(model => model.Birthday)
+                </dd>
+                <dt>
+                    @Html.DisplayNameFor(model => model.PhoneNumber)
+                </dt>
+                <dd>
+                    @Html.DisplayFor(model => model.PhoneNumber)
+                </dd>
+                <dt>
+                    @Html.DisplayNameFor(model => model.Position)
+                </dt>
+                <dd>
+                    @Html.DisplayName(Convert.ToString((EmployeePosition)Model.Position))
+                </dd>
+                <dt>
+                    @Html.DisplayNameFor(model => model.Salary)
+                </dt>
+                <dd>
+                    @Html.DisplayFor(model => model.Salary)
+                </dd>
+                <dt>
+                    @Html.DisplayNameFor(model => model.Overtime)
+                </dt>
+                <dd>
+                    @Html.DisplayFor(model => model.Overtime)
+                </dd>
+                <dt>
+                    @Html.DisplayName("Total Experiance")
+                </dt>
+                <dd>
+                    @Html.DisplayName(experiance)
+                </dd>
+                <dt>
+                    @Html.DisplayNameFor(model => model.BeginningOfWork)
+                </dt>
+                <dd>
+                    @Html.DisplayFor(model => model.BeginningOfWork)
+                </dd>
+                <dt>
+                    @Html.DisplayNameFor(model => model.Vacation)
+                </dt>
+                <dd>
+                    @Html.DisplayFor(model => model.Vacation)
+                </dd>
+                <dt>
+                    @Html.DisplayNameFor(model => model.Description)
+                </dt>
+                <dd>
+                    @Html.DisplayFor(model => model.Description)
+                </dd>
+            </dl>
+        </div>
+    </div>
+    <a asp-action="Index">Back to List</a> |
+    <a asp-action="Transaction" asp-route-id="@Model.EmployeeId">Transaction List</a> |
+    <a asp-action="SetOvertime" asp-route-id="@Model.EmployeeId">Set Overtime</a> |
+    <a asp-action="SendOnVacation" asp-route-id="@Model.EmployeeId">Send on Vacation</a> |
+    <a asp-action="Edit" asp-route-id="@Model.EmployeeId">Edit</a> |
+    <a asp-action="Delete" asp-route-id="@Model.EmployeeId">Delete</a>
+</div>

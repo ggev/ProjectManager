@@ -1,0 +1,28 @@
+﻿@model IEnumerable<ProjectManager.Models.Employees>
+@{
+    ViewData["Title"] = "Employees";
+    var employment = ViewBag.Employment as Dictionary<int, short>;
+}
+<h2>Project: @ViewBag.ProjectName</h2>
+<p><a asp-action="AddEmployee" asp-route-id="@ViewBag.ProjectId">Add Employee</a></p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>@Html.DisplayNameFor(model => model.FullName)</th>
+            <th>@Html.DisplayNameFor(model => model.PhoneNumber)</th>
+            <th>@Html.DisplayNameFor(model => model.Position)</th>
+            <th>@Html.DisplayNameFor(model => model.Salary)</th>
+            <th>@Html.DisplayName("Employment")</th>
+        </tr>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@Html.DisplayFor(modelItem => item.FullName)</td>
+                <td>@Html.DisplayFor(modelItem => item.PhoneNumber)</td>
+                <td>@Html.DisplayName(Convert.ToString((EmployeePosition)item.Position))</td>
+                <td>@Html.DisplayFor(modelItem => item.Salary)</td>
+                <td>@Html.DisplayName(employment[item.EmployeeId].ToString())</td>
+            </tr>
+        }
+    </thead>
+</table>

@@ -1,0 +1,99 @@
+﻿@using Microsoft.AspNetCore.Http;
+
+@model ProjectManager.Models.ProjectEmployees;
+@{
+    ViewData["Title"] = "ChangePercent";
+
+    if (Context.Session.GetString("UserId") == null)
+    {
+        Context.Response.Redirect("/Login/SignIn");
+    }
+}
+<h2>ChangePercent</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="ChangePercent" asp-route-id="@Model.ProjectEmployeesId">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label>Project: @Model.Project.Name</label>
+            </div>
+            <div class="form-group">
+                <label>Employee: @Model.Employee.FullName</label>
+            </div>
+            <label class="control-label">Inactivity: </label>
+            <label id="inactivity" class="control-label">@ViewBag.Inactivity%</label>
+            <div class="form-group">
+                <label asp-for="Percent" class="control-label"></label>
+                <input id="percent" asp-for="Percent" class="form-control" />
+                <input type="hidden" id="initialPercent" asp-for="Percent" class="form-control" />
+                <span class="text-danger" id="percentValidation"></span>
+                <span asp-validation-for="Percent" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input type="submit" asp-route-id="@Model.ProjectEmployeesId" value="Change" class="btn btn-default" />
+            </div>
+        </form>
+    </div>
+</div>
+<div>
+    <a asp-action="EmployeeProjects" asp-route-id="@Model.EmployeeId">Back to List</a>
+</div>
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}
+
+<script>
+    $("#percent").change(function () {
+        GetEmploymentOfEmployee();        
+        CheckBenefit();       
+    })
+    $(".btn").click(function () {
+            //Check percent validation
+            if (parseInt($("#inactivity").text().replace("%", "")) < 0) {
+                $("#percentValidation").text("You entered too high a percentage");
+                return false;
+            }
+            if ($("#percentValidation").text() == "") {
+                return true;
+            }
+            return false;
+    })
+    function CheckBenefit() {
+        $.ajax({
+            url: '/Projects/CheckBenefit',
+            dataType: "json",
+            type: "GET",
+            async: false,
+            data: { employeeId: @Model.EmployeeId, projectId: @Model.ProjectId, percent: $("#percent").val() - $("#initialPercent").val() },
+            contentType: 'application/json; charset=utf-8',
+            success: function (data) {
+                if (!data) {
+                    $("#percentValidation").text("You entered too high a percentage");
+                }
+                else {
+                    $("#percentValidation").text("");
+                }
+            }
+        })
+    }
+    function GetEmploymentOfEmployee() {
+        $.ajax({
+            url: '/Projects/GetEmploymentPercent',
+            dataType: "json",
+            type: "GET",
+            async: false,
+            data: { id: @Model.EmployeeId },
+            contentType: 'application/json; charset=utf-8',
+            success: function (data) {
+                if (100 - data + ($("#initialPercent").val() - $("#percent").val()) < 0) {
+                    $("#percentValidation").text("You entered too high a percentage");
+                }
+                else {
+                    $("#inactivity").text(100 - data + ($("#initialPercent").val() - $("#percent").val()) + '%');
+                    $("#percentValidation").text("");
+                }
+            }
+        })
+    }
+</script>

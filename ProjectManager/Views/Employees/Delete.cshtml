@@ -1,0 +1,23 @@
+﻿@using Microsoft.AspNetCore.Http;
+
+@model ProjectManager.Models.Employees
+@{
+    ViewData["Title"] = "Delete";
+
+    if (Context.Session.GetString("UserId") == null)
+    {
+        Context.Response.Redirect("/Login/SignIn");
+    }
+}
+
+<h2>Delete</h2>
+
+<h3>Are you sure you want to delete employee @Model.FullName?</h3>
+<div>
+    <hr />
+    <form asp-action="Delete">
+        <input type="hidden" asp-for="EmployeeId" />
+        <input type="submit" value="Delete" class="btn btn-default" /> |
+        <a asp-action="Index">Back to List</a>
+    </form>
+</div>

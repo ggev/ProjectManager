@@ -1,0 +1,69 @@
+﻿@using Microsoft.AspNetCore.Http;
+
+@model IEnumerable<ProjectManager.Models.Projects>
+@{
+    ViewData["Title"] = "Index";
+    var costsBenefit = ViewBag.CostsBenefitList as Dictionary<Projects, Tuple<double, double>>;
+
+    if (Context.Session.GetString("UserId") == null)
+    {
+        Context.Response.Redirect("/Login/SignIn");
+    }
+}
+
+<h2>Projects</h2>
+<p>
+    <a asp-action="Create">Add New Project</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Start)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Deadline)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Status)
+            </th>
+            <th>
+                @Html.DisplayName("Costs")
+            </th>
+            <th>
+                @Html.DisplayName("Benefit")
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Name)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Start)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Deadline)
+                </td>
+                <td>
+                    @Html.DisplayName(Convert.ToString((ProjectStatus)item.Status))
+                </td>
+                <td>
+                    @Html.DisplayName(costsBenefit[item].Item1.ToString())
+                </td>
+                <td>
+                    @Html.DisplayName(costsBenefit[item].Item2.ToString())
+                </td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@item.ProjectId">Details</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

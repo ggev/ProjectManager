@@ -1,0 +1,58 @@
+﻿@using Microsoft.AspNetCore.Http;
+
+@model IEnumerable<ProjectManager.Models.Transaction>
+@{
+    ViewData["Title"] = "Transaction";
+    if (Context.Session.GetString("UserId") == null)
+    {
+        Context.Response.Redirect("/Login/SignIn");
+    }
+    var idList = new List<int>();
+}
+<h2>Transaction</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Date)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Payment)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Status)
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Date)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Payment)
+                </td>
+                <td>
+                    <select id="@("select" + item.Id)" asp-for="@item.Status" asp-items="@Html.GetEnumSelectList<TransactionStatus>()"></select>
+                </td>
+            </tr>
+            idList.Add(item.Id);
+        }
+    </tbody>
+</table>
+
+@foreach (var item in idList)
+{
+    <script>
+        $("#@("select"+item)").change(function () {
+            $.ajax({
+                url: '/Employees/ChangeTransactionStatus',
+                dataType: "json",
+                type: "GET",
+                data: { transactionId: @item }
+            })
+        })
+    </script>
+}

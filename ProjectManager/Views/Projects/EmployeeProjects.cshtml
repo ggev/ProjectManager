@@ -1,0 +1,55 @@
+﻿@using Microsoft.AspNetCore.Http;
+
+@model IEnumerable<ProjectManager.Models.ProjectEmployees>
+@{
+    ViewData["Title"] = "EmployeeProjects";
+
+    var percent = ViewBag.Percent as Dictionary<Projects, short>;
+    if (Context.Session.GetString("UserId") == null)
+    {
+        Context.Response.Redirect("/Login/SignIn");
+    }
+}
+<h2>Employee Projects</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Project.Name)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Project.Status)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Project.Budget)
+            </th>
+            <th>
+                @Html.DisplayName("Percent")
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Project.Name)
+                </td>
+                <td>
+                    @Html.DisplayName(Convert.ToString((ProjectStatus)item.Project.Status))
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Project.Budget)
+                </td>
+                <td>
+                    @Html.DisplayName(@item.Percent.ToString())
+
+                </td>
+                <td>
+                    <a asp-action="ChangePercent" asp-route-id="@item.ProjectEmployeesId">Change Percent</a>  |
+                    <a asp-action="Details" asp-route-id="@item.ProjectId">Details</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

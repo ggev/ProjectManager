@@ -1,0 +1,64 @@
+﻿@using Microsoft.AspNetCore.Http;
+
+@model IEnumerable<ProjectManager.Models.Employees>
+@{
+    ViewData["Title"] = "Index";
+    var experiance = ViewBag.Experiance as Dictionary<Employees, string>;
+    var employment = ViewBag.Employment as Dictionary<int, short>;
+
+    if (Context.Session.GetString("UserId") == null)
+    {
+        Context.Response.Redirect("/Login/SignIn");
+    }
+}
+
+<h2>Employee List</h2>
+<p>
+    <a asp-action="Create">Add New Employee</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.FullName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PhoneNumber)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Position)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Salary)
+            </th>
+            <th>
+                @Html.DisplayName("Employment")
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.FullName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.PhoneNumber)
+                </td>
+                <td>
+                    @Html.DisplayName(Convert.ToString((EmployeePosition)item.Position))
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Salary)
+                </td>   
+                <td>
+                    @Html.DisplayName(employment[item.EmployeeId].ToString())
+                </td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@item.EmployeeId">Details</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
