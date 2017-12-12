@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using ProjectManager.Models;
 using System;
 using System.Collections.Generic;
@@ -181,34 +182,99 @@ namespace ProjectManager.Controllers
             return View(employee);
         }
 
-        // POST: Employees/SendOnVacation/5
-        [HttpPost]
-        public async Task<IActionResult> SendOnVacation(int id, [Bind("Vacation")] Employees employees)
+        public JsonResult ProjectsInTheSpecifiedPeriod(int employeeId, DateTime dateFrom, DateTime dateTo)
         {
-            var employee = await (from e in _context.Employees
-                                  where e.EmployeeId == id
-                                  select e).SingleOrDefaultAsync();
-            if (employee == null)
+            var employeeReturnDay = (from e in _context.Employees
+                                     where e.EmployeeId == employeeId
+                                     select e.ReturnFromVacation).SingleOrDefault();
+            if (DateTime.Today.CompareTo(employeeReturnDay) < 0)
             {
-                return NotFound();
+                return Json(JsonConvert.SerializeObject(1));
             }
-            if (employee.CalculateMonthPaymentFrom > DateTime.Now)
+            if (dateFrom == DateTime.MinValue || dateTo == DateTime.MinValue || dateFrom.CompareTo(DateTime.Today) < 0)
             {
-                ModelState.AddModelError("Vacation", "Employee is already on vacation");
-                return View(employee);
+                return Json(JsonConvert.SerializeObject(-1));
             }
-            await CalculateCurrentPayment(employee, employees.Vacation);
-            employee.Vacation += employees.Vacation;
+            var projects = (from p in _context.ProjectEmployees
+                            where p.EmployeeId == employeeId
+                            select p.Project).ToList();
+            if (!projects.Any())
+            {
+                return Json(JsonConvert.SerializeObject(0));
+            }
+            var projectList = new List<Projects>();
+            DateTime maxDate = dateFrom;
+            foreach (var item in projects)
+            {
+                if (dateFrom.CompareTo(item.Deadline) <= 0)
+                {
+                    projectList.Add(item);
+                    if (maxDate.CompareTo(item.Deadline) < 0)
+                    {
+                        maxDate = item.Deadline;
+                    }
+                }
+            }
+            if (!projectList.Any())
+            {
+                return Json(JsonConvert.SerializeObject(0));
+            }
+            return Json(JsonConvert.SerializeObject(projectList));
+        }
+
+        public bool CommitVacation(int employeeId, DateTime goToVacationDay, DateTime returnFromVacationDay)
+        {
+            int freeDays, busyDays;
+            var employee = (from e in _context.Employees
+                            where e.EmployeeId == employeeId
+                            select e).SingleOrDefault();
+            var projectsDeadLine = (from p in _context.ProjectEmployees
+                                    where p.EmployeeId == employeeId
+                                    select p.Project.Deadline).ToArray();
+            DateTime maxDate = goToVacationDay;
+            if (projectsDeadLine.Any())
+            {
+                foreach (var item in projectsDeadLine)
+                {
+                    if (maxDate.CompareTo(item) < 0)
+                    {
+                        maxDate = item;
+                    }
+                }
+                freeDays = maxDate.DayOfYear - goToVacationDay.DayOfYear + 1;
+                busyDays = returnFromVacationDay.DayOfYear - maxDate.DayOfYear;
+            }
+            freeDays = returnFromVacationDay.DayOfYear - goToVacationDay.DayOfYear + 1;
+            busyDays = 0;
+            int vacationQuantity = 20 - employee.Vacation;
+            if (vacationQuantity <= 0)
+            {
+                employee.VacationCount = (byte)(freeDays + busyDays);
+            }
+            else
+            {
+                if (freeDays >= vacationQuantity)
+                {
+                    employee.VacationCount = (byte)(freeDays - vacationQuantity);
+                    employee.Vacation += (byte)(freeDays + busyDays);
+                }
+                else
+                {
+                    employee.VacationCount = (byte)busyDays;
+                    employee.Vacation += (byte)(freeDays + busyDays);
+                }
+            }
+            employee.ReturnFromVacation = returnFromVacationDay;
             try
             {
                 _context.Update(employee);
-                await _context.SaveChangesAsync();
+                _context.SaveChanges();
+                return true;
             }
-            catch (DbUpdateConcurrencyException)
+            catch
             {
-                throw;
+                return false;
             }
-            return RedirectToAction(nameof(Details), new { id = id });
         }
 
         // GET: Employees/SetOvertime/5
@@ -256,10 +322,6 @@ namespace ProjectManager.Controllers
             var transaction = await (from t in _context.Transaction
                                      where t.EmployeeId == id && t.Payment != 0
                                      select t).ToListAsync();
-            if (transaction.Last().Date.Month == 12)
-            {
-                await AnnulVacation(id);
-            }
             return View(transaction);
         }
 
@@ -271,7 +333,7 @@ namespace ProjectManager.Controllers
         // get employees full work total experiance
         public string TotalExperiance(Employees employees)
         {
-            int experiance = (DateTime.Now.Month - employees.BeginningOfWork.Month) + (DateTime.Now.Year - employees.BeginningOfWork.Year) * 12;
+            int experiance = (DateTime.Today.Month - employees.BeginningOfWork.Month) + (DateTime.Today.Year - employees.BeginningOfWork.Year) * 12;
 
             int totalExperinace = employees.Experiance + experiance;
 
@@ -320,29 +382,13 @@ namespace ProjectManager.Controllers
             }
         }
 
-        private async Task AnnulVacation(int id)
-        {
-            var employees = await (from e in _context.Employees
-                                   where e.Vacation != 0
-                                   select e).ToListAsync();
-            if (employees != null)
-            {
-                foreach (var item in employees)
-                {
-                    item.Vacation = 0;
-                }
-                _context.Update(employees);
-                await _context.SaveChangesAsync();
-            }
-        }
-
         //TODO not working days
         private async Task CalculateMonthlyPayment(Employees employee)
         {
-            while (DateTime.Now.Month > employee.CalculateMonthPaymentFrom.Month || DateTime.Now.Year > employee.CalculateMonthPaymentFrom.Year)
+            while (DateTime.Today.CompareTo(employee.CalculateMonthPaymentFrom) > 0 && DateTime.Today.Month != employee.CalculateMonthPaymentFrom.Month)
             {
                 DateTime startingDate = employee.CalculateMonthPaymentFrom;
-                DateTime today = DateTime.Now;
+                DateTime today = DateTime.Today;
                 byte count = 0;
                 int lastDayInMonth = DateTime.DaysInMonth(startingDate.Year, startingDate.Month);
                 for (int i = startingDate.Day; i <= lastDayInMonth; i++)
@@ -359,6 +405,7 @@ namespace ProjectManager.Controllers
                             break;
                     }
                 }
+                CalculatePaymentDays(employee.ReturnFromVacation, count, employee.VacationCount);
                 Transaction transaction = await (from t in _context.Transaction
                                                  where t.EmployeeId == employee.EmployeeId && t.Payment == 0
                                                  select t).SingleOrDefaultAsync();
@@ -373,7 +420,8 @@ namespace ProjectManager.Controllers
                         Payment = count * (8 + employee.Overtime) * employee.Salary
                     };
                     _context.Add(transaction);
-                    employee.CalculateMonthPaymentFrom = new DateTime(today.Year, today.Month, 1);
+                    var tempDate = startingDate.AddMonths(1);
+                    employee.CalculateMonthPaymentFrom = new DateTime(tempDate.Year, tempDate.Month, 1);
                     _context.Update(employee);
                 }
                 else
@@ -389,15 +437,16 @@ namespace ProjectManager.Controllers
             }
         }
 
+
         private async Task CalculateMonthlyPayment(int id)
         {
             var employee = await (from e in _context.Employees
                                   where e.EmployeeId == id
                                   select e).SingleOrDefaultAsync();
-            while (DateTime.Now.Month > employee.CalculateMonthPaymentFrom.Month || DateTime.Now.Year > employee.CalculateMonthPaymentFrom.Year)
+            while (DateTime.Today.CompareTo(employee.CalculateMonthPaymentFrom) > 0 && DateTime.Today.Month != employee.CalculateMonthPaymentFrom.Month)
             {
                 DateTime startingDate = employee.CalculateMonthPaymentFrom;
-                DateTime today = DateTime.Now;
+                DateTime today = DateTime.Today;
                 byte count = 0;
                 int lastDayInMonth = DateTime.DaysInMonth(startingDate.Year, startingDate.Month);
                 for (int i = startingDate.Day; i <= lastDayInMonth; i++)
@@ -414,6 +463,7 @@ namespace ProjectManager.Controllers
                             break;
                     }
                 }
+                CalculatePaymentDays(employee.ReturnFromVacation, count, employee.VacationCount);
                 Transaction transaction = await (from t in _context.Transaction
                                                  where t.EmployeeId == employee.EmployeeId && t.Payment == 0
                                                  select t).SingleOrDefaultAsync();
@@ -428,7 +478,8 @@ namespace ProjectManager.Controllers
                         Payment = count * (8 + employee.Overtime) * employee.Salary
                     };
                     _context.Add(transaction);
-                    employee.CalculateMonthPaymentFrom = new DateTime(today.Year, today.Month, 1);
+                    var tempDate = startingDate.AddMonths(1);
+                    employee.CalculateMonthPaymentFrom = new DateTime(tempDate.Year, tempDate.Month, 1);
                     _context.Update(employee);
                 }
                 else
@@ -452,8 +503,8 @@ namespace ProjectManager.Controllers
             await CalculateMonthlyPayment(employee);
             byte count = 0;
             DateTime startingDate = employee.CalculateMonthPaymentFrom;
-            DateTime today = DateTime.Now;
-            for (int i = startingDate.Day; i < DateTime.Now.Day; i++)
+            DateTime today = DateTime.Today;
+            for (int i = startingDate.Day; i < DateTime.Today.Day; i++)
             {
                 DateTime currentDate = startingDate.AddDays(i - startingDate.Day);
                 switch (currentDate.DayOfWeek)
@@ -498,8 +549,8 @@ namespace ProjectManager.Controllers
             await CalculateMonthlyPayment(employee);
             byte count = 0;
             DateTime startingDate = employee.CalculateMonthPaymentFrom;
-            DateTime today = DateTime.Now;
-            for (int i = startingDate.Day; i < DateTime.Now.Day; i++)
+            DateTime today = DateTime.Today;
+            for (int i = startingDate.Day; i < DateTime.Today.Day; i++)
             {
                 DateTime currentDate = startingDate.AddDays(i - startingDate.Day);
                 switch (currentDate.DayOfWeek)
@@ -541,7 +592,7 @@ namespace ProjectManager.Controllers
                 var dateMark = employee.CalculateMonthPaymentFrom.AddDays(vacation);
                 employee.CalculateMonthPaymentFrom = dateMark;
                 _context.Update(employee);
-                if (dateMark.Month != DateTime.Now.Month)
+                if (dateMark.Month != DateTime.Today.Month)
                 {
                     transaction.Payment = transaction.PaymentCounter;
                     transaction.Date = today;
@@ -568,13 +619,37 @@ namespace ProjectManager.Controllers
                 var dateMark = employee.CalculateMonthPaymentFrom.AddDays(vacation);
                 employee.CalculateMonthPaymentFrom = dateMark;
                 _context.Update(employee);
-                if (dateMark.Month != DateTime.Now.Month)
+                if (dateMark.Month != DateTime.Today.Month)
                 {
                     transaction.Payment = transaction.PaymentCounter;
                     transaction.Date = today;
                     transaction.PaymentCounter = 0;
                     _context.Update(transaction);
                 }
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="returnFromVacation">A day when employee will back from vacation</param>
+        /// <param name="count">Not working days count</param>
+        /// <param name="vacationCount">Employees vacation count</param>
+        private void CalculatePaymentDays(DateTime returnFromVacation, byte count, byte vacationCount)
+        {
+            if (DateTime.Today.CompareTo(returnFromVacation) > 0)
+            {
+                if (count >= vacationCount)
+                {
+                    count -= vacationCount;
+                    vacationCount = 0;
+                }
+                else
+                {
+                    vacationCount -= count;
+                    count = 0;
+                }
+
             }
         }
     }

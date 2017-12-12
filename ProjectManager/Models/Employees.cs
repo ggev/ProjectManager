@@ -37,6 +37,8 @@ namespace ProjectManager.Models
         public byte Vacation { get; set; }
         public byte Overtime { get; set; }
         public DateTime CalculateMonthPaymentFrom { get; set; }
+        public byte VacationCount { get; set; }
+        public DateTime ReturnFromVacation { get; set; }
 
         [DisplayName("Photo")]
         [NotMapped]

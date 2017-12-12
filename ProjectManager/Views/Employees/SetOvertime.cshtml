@@ -17,7 +17,7 @@
         <form asp-action="SetOvertime" method="post">
             <div class="form-group">
                 <label asp-for="Overtime" class="control-label"></label>
-                <input asp-for="Overtime" class="form-control" />
+                <input asp-for="Overtime" min="0" max="4" class="form-control" />
                 <span asp-validation-for="Overtime"></span>
             </div>
             <div class="form-group">

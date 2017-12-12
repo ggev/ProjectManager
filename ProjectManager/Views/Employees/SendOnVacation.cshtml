@@ -1,5 +1,4 @@
 ﻿@using Microsoft.AspNetCore.Http;
-
 @model ProjectManager.Models.Employees
 @{
     ViewData["Title"] = "SendOnVacation";
@@ -9,19 +8,86 @@
     }
 }
 <h2>Send On Vacantion</h2>
-    <h3>@Model.FullName</h3>
+<h3>@Model.FullName</h3>
 <div class="row">
-    <div class="col-md-2">
-        <form asp-action="SendOnVacation" method="post">
-            <div class="form-group">
-                <label asp-for="Vacation" class="control-label"></label>
-                <input asp-for="Vacation" value="" class="form-control" />
-                <span asp-validation-for="Vacation" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <button asp-route-id=@Model.EmployeeId>Submit</button>
-            </div>
-        </form>
+    <div class="col-md-1">
+        <label>From</label>
+        <input id="dateFrom" type="date" min=@DateTime.Today/>
+    </div>
+    <div class="col-md-1"></div>
+    <div class="col-md-1">
+        <label>To</label>
+        <input id="dateTo" type="date" />
+    </div>
+    <div class="col-md-1"></div>
+    <div class="col-md-1" style="margin-top:20px">
+        <button id="checkButton" class="btn btn-default">Check</button>
     </div>
 </div>
+<div id="projectsContainer"></div><br>
+<button style="display:none" id="sendOnVacationButton">Commit</button>
+<script>
+    $("#checkButton").click(function () {
+        $.ajax({
+            url: '/Employees/ProjectsInTheSpecifiedPeriod',
+            dataType: "json",
+            type: "GET",
+            data: { employeeId: @Model.EmployeeId, dateFrom: $("#dateFrom").val(), dateTo: $("#dateTo").val() },
+            contentType: 'application/json; charset=utf-8',
+            success: function (response) {
+                if (response == -1) {
+                    alert("Enter the correct date");
+                }
+                else if (response == 1) {
+                    alert("An employee is already in vacation");
+                }
+                else if (response == 0) {
+                    $("#projectsContainer").html('<br/><div class="row"><div class="col-md-2"><textbox id="freeDays"><b>Free Days: </b></textbox></div><div class="col-md-2">'+
+                                                 '< textbox id= "busyDays" > <b>Busy days: </b></textbox ></div ></div > <br>');
+                    $("#freeDays").after(dayOfYear($("#dateTo").val()) - dayOfYear($("#dateFrom").val()) + 1);
+                    $("#busyDays").after(0);
+                    $("#sendOnVacationButton").css("display", "inherit");
+                }
+                else {
+                var maxDate = $("#dateFrom").val();
+                response = $.parseJSON(response);
+                var tableHTML = '<br/><div class="row"><div class="col-md-2"><textbox id="freeDays"><b>Free Days: </b></textbox></div><div class="col-md-2">'+
+                                '< textbox id= "busyDays" > <b>Busy days: </b></textbox></div></div><br /> <table class="table"><thead><tr><th>Project Name</th><th>Start</th><th>Deadline</th></tr></thead><tbody>';
+                $.each(response, function (intex, item) {
+                    tableHTML += '<tr><td>' + item.Name + '</td><td>' + new Date(item.Start).toLocaleDateString() + '</td><td>' + new Date(item.Deadline).toLocaleDateString() + '</td></tr>';
+                    if (maxDate < item.Deadline) {
+                        maxDate = item.Deadline;
+                    }
+                })
+                tableHTML += '</tbody ></table >';
+                $("#projectsContainer").html(tableHTML);
+                $("#freeDays").after(dayOfYear(maxDate) - dayOfYear($("#dateFrom").val()) + 1);
+                $("#busyDays").after(dayOfYear($("#dateTo").val()) - dayOfYear(maxDate));
+                }
+            },
+        })
+    })
 
+    $("#sendOnVacationButton").click(function () {
+        $.ajax({
+            url: '/Employees/CommitVacation',
+            dataType: "json",
+            type: "GET",
+            data: { employeeId: @Model.EmployeeId, goToVacationDay: $("#dateFrom").val(), returnFromVacationDay: $("#dateTo").val() },
+            contentType: 'application/json; charset=utf-8',
+            success: function (response) {
+                if (response) {
+                    $("#projectsContainer").html("<br><textbox><b>Success</b></textbox>");
+                }
+            },
+        })
+    })
+
+    function dayOfYear(dateString) {
+        var date = new Date(dateString);
+        var start = new Date(date.getFullYear(), 0, 0);
+        var diff = (date - start) + ((start.getTimezoneOffset() - date.getTimezoneOffset()) * 60 * 1000);
+        var oneDay = 1000 * 60 * 60 * 24;
+        return Math.floor(diff / oneDay);
+    }
+</script>
